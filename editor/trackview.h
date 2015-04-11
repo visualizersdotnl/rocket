@@ -8,6 +8,7 @@
 
 class QLineEdit;
 class SyncDocument;
+class SyncPage;
 
 class TrackView : public QAbstractScrollArea
 {
@@ -165,11 +166,12 @@ private:
 
 	/* cursor position */
 	int editRow, editTrack;
-	
+
 	int scrollPosX,  scrollPosY;
 	int windowRows;
-	
+
 	SyncDocument *document;
+	SyncPage *page;
 
 	QLineEdit *lineEdit;
 

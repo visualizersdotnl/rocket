@@ -10,11 +10,13 @@
 
 #include "clientsocket.h"
 #include "synctrack.h"
+#include "syncpage.h"
 
 class SyncDocument : public QObject {
 	Q_OBJECT
 public:
 	SyncDocument() :
+	    defaultSyncPage(this, "default"),
 	    rows(128)
 	{
 		QObject::connect(&undoStack, SIGNAL(cleanChanged(bool)),
@@ -29,8 +31,7 @@ public:
 		tracks.append(t);
 
 		int index = tracks.size() - 1;
-		trackOrder.push_back(index);
-		Q_ASSERT(trackOrder.size() == tracks.size());
+		defaultSyncPage.addTrack(index);
 		return t;
 	}
 
@@ -56,7 +57,7 @@ public:
 
 	size_t getTrackCount() const
 	{
-		Q_ASSERT(trackOrder.size() == tracks.size());
+		// TODO: clean up usages of this (tracks vs trackOrder)
 		return tracks.size();
 	}
 
@@ -71,7 +72,6 @@ public:
 	void deleteKeyFrame(SyncTrack *track, int row);
 	void endMacro() { undoStack.endMacro(); }
 
-	size_t getTrackIndexFromPos(size_t track) const;
 	void swapTrackOrder(size_t t1, size_t t2);
 
 	static SyncDocument *load(const QString &fileName);
@@ -88,16 +88,22 @@ public:
 	int nextRowBookmark(int row) const;
 	int prevRowBookmark(int row) const;
 
+	const SyncPage &getDefaultSyncPage() const
+	{
+		return defaultSyncPage;
+	}
+
 private:
 	QList<SyncTrack*> tracks;
 	QList<int> rowBookmarks;
-	QVector<size_t> trackOrder;
+	SyncPage defaultSyncPage;
 	size_t rows;
 
 	QUndoStack undoStack;
 
 signals:
 	void modifiedChanged(bool modified);
+	void trackModified(int track);
 
 private slots:
 	void cleanChanged(bool clean) { emit modifiedChanged(!clean); }

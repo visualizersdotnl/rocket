@@ -167,8 +167,7 @@ void TrackView::paintTopMargin(QPainter &painter, const QRect &rcTracks)
 	int endTrack   = qBound(0, getTrackFromPhysicalX(rcTracks.right()) + 1, int(getTrackCount()));
 
 	for (int track = startTrack; track < endTrack; ++track) {
-		size_t index = doc->getTrackIndexFromPos(track);
-		const SyncTrack *t = doc->getTrack(index);
+		const SyncTrack *t = page->getTrack(track);
 
 		QRect topMargin(getPhysicalX(track), 0, trackWidth, topMarginHeight);
 		if (!rcTracks.intersects(topMargin))
@@ -298,7 +297,7 @@ void TrackView::paintTrack(QPainter &painter, const QRect &rcTracks, int track)
 
 	QRect selection = getSelection();
 
-	const SyncTrack *t = getDocument()->getTrack(getDocument()->getTrackIndexFromPos(track));
+	const SyncTrack *t = getDocument()->getDefaultSyncPage().getTrack(track);
 	QMap<int, SyncTrack::TrackKey> keyMap = t->getKeyMap();
 
 	for (int row = firstRow; row <= lastRow; ++row) {
@@ -425,8 +424,7 @@ void TrackView::editCopy()
 
 	QVector<struct CopyEntry> copyEntries;
 	for (int track = selection.left(); track <= selection.right(); ++track) {
-		const size_t trackIndex  = doc->getTrackIndexFromPos(track);
-		const SyncTrack *t = doc->getTrack(trackIndex);
+		const SyncTrack *t = doc->getDefaultSyncPage().getTrack(track);
 
 		for (int row = selection.top(); row <= selection.bottom(); ++row) {
 			if (t->isKeyFrame(row)) {
@@ -468,9 +466,10 @@ void TrackView::editCut()
 void TrackView::editPaste()
 {
 	SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	if (!doc)
+		return;
 	
-	if (0 == getTrackCount()) {
+	if (!getTrackCount()) {
 		QApplication::beep();
 		return;
 	}
@@ -489,10 +488,10 @@ void TrackView::editPaste()
 		doc->beginMacro("paste");
 		for (int i = 0; i < buffer_width; ++i) {
 			size_t trackPos = editTrack + i;
-			if (trackPos >= getTrackCount()) continue;
+			if (trackPos >= getTrackCount())
+				continue;
 
-			size_t trackIndex = doc->getTrackIndexFromPos(trackPos);
-			SyncTrack *t = doc->getTrack(trackIndex);
+			SyncTrack *t = page->getTrack(trackPos);
 			for (int j = 0; j < buffer_height; ++j) {
 				int row = editRow + j;
 				if (t->isKeyFrame(row))
@@ -514,12 +513,12 @@ void TrackView::editPaste()
 
 			size_t trackPos = editTrack + ce.track;
 			if (trackPos < getTrackCount()) {
-				int track = doc->getTrackIndexFromPos(trackPos);
 				SyncTrack::TrackKey key = ce.keyFrame;
 				key.row += editRow;
 
 				// since we deleted all keyframes in the edit-box already, we can just insert this one. 
-				doc->setKeyFrame(doc->getTrack(track), key);
+
+				doc->setKeyFrame(page->getTrack(trackPos), key);
 			}
 		}
 		doc->endMacro();
@@ -753,8 +752,7 @@ void TrackView::editEnterValue()
 		return;
 
 	if (lineEdit->text().length() > 0 && editTrack < int(getTrackCount())) {
-		int track = doc->getTrackIndexFromPos(editTrack);
-		SyncTrack *t = doc->getTrack(track);
+		SyncTrack *t = page->getTrack(editTrack);
 
 		SyncTrack::TrackKey newKey;
 		newKey.type = SyncTrack::TrackKey::STEP;
@@ -781,8 +779,7 @@ void TrackView::editToggleInterpolationType()
 	if (NULL == doc) return;
 	
 	if (editTrack < int(getTrackCount())) {
-		int track = doc->getTrackIndexFromPos(editTrack);
-		SyncTrack *t = doc->getTrack(track);
+		SyncTrack *t = page->getTrack(editTrack);
 		QMap<int, SyncTrack::TrackKey> keyMap = t->getKeyMap();
 
 		QMap<int, SyncTrack::TrackKey>::const_iterator it = keyMap.lowerBound(editRow);
@@ -822,8 +819,7 @@ void TrackView::editClear()
 	
 	doc->beginMacro("clear");
 	for (int track = selection.left(); track <= selection.right(); ++track) {
-		int trackIndex = doc->getTrackIndexFromPos(track);
-		SyncTrack *t = doc->getTrack(trackIndex);
+		SyncTrack *t = page->getTrack(track);
 
 		for (int row = selection.top(); row <= selection.bottom(); ++row) {
 			if (t->isKeyFrame(row))
@@ -851,8 +847,7 @@ void TrackView::editBiasValue(float amount)
 	doc->beginMacro("bias");
 	for (int track = selection.left(); track <= selection.right(); ++track) {
 		Q_ASSERT(track < int(getTrackCount()));
-		int trackIndex = doc->getTrackIndexFromPos(track);
-		SyncTrack *t = doc->getTrack(trackIndex);
+		SyncTrack *t = page->getTrack(track);
 
 		for (int row = selection.top(); row <= selection.bottom(); ++row) {
 			if (t->isKeyFrame(row)) {

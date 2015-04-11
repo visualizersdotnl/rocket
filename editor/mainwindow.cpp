@@ -395,7 +395,7 @@ void MainWindow::onCurrValDirty()
 {
 	SyncDocument *doc = trackView->getDocument();
 	if (doc && doc->getTrackCount() > 0) {
-		const SyncTrack *t = doc->getTrack(doc->getTrackIndexFromPos(trackView->getEditTrack()));
+		const SyncTrack *t = doc->getDefaultSyncPage().getTrack(trackView->getEditTrack());
 		int row = trackView->getEditRow();
 
 		setStatusValue(t->getValue(row), true);

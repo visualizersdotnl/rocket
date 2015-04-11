@@ -7,6 +7,7 @@
 
 class QLabel;
 class QAction;
+class QTabWidget;
 class QTcpServer;
 
 class SyncDocument;
@@ -40,6 +41,7 @@ public:
 	ClientSocket clientSocket;
 	size_t clientIndex;
 
+	QTabWidget *tabWidget;
 	TrackView *trackView;
 	QLabel *statusPos, *statusValue, *statusKeyType;
 	QMenu *fileMenu, *recentFilesMenu, *editMenu;
