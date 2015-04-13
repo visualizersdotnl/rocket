@@ -18,11 +18,7 @@ public:
 	TrackView(QWidget *parent);
 	~TrackView();
 
-	void setDocument(SyncDocument *document)
-	{
-		this->document = document;
-		this->setupScrollBars();
-	}
+	void setDocument(SyncDocument *document);
 
 	const SyncDocument *getDocument() const { return document; }
 	SyncDocument *getDocument() { return document; }

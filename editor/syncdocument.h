@@ -29,9 +29,7 @@ public:
 	{
 		SyncTrack *t = new SyncTrack(name);
 		tracks.append(t);
-
-		int index = tracks.size() - 1;
-		defaultSyncPage.addTrack(index);
+		defaultSyncPage.addTrack(t);
 		return t;
 	}
 
@@ -88,7 +86,7 @@ public:
 	int nextRowBookmark(int row) const;
 	int prevRowBookmark(int row) const;
 
-	const SyncPage &getDefaultSyncPage() const
+	SyncPage &getDefaultSyncPage()
 	{
 		return defaultSyncPage;
 	}

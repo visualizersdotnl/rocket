@@ -463,8 +463,8 @@ void MainWindow::processGetTrack(ClientSocket &sock)
 		t = doc->createTrack(trackName);
 
 	// hook up signals to slots
-	QObject::connect(t,             SIGNAL(keyFrameChanged(const SyncTrack &, int)),
-			 &clientSocket, SLOT(onKeyFrameChanged(const SyncTrack &, int)));
+	QObject::connect(t,             SIGNAL(trackChanged(const SyncTrack &)),
+			 &clientSocket, SLOT(onTrackChanged(const SyncTrack &)));
 
 	// setup remap
 	clientSocket.clientTracks[trackName] = clientIndex++;

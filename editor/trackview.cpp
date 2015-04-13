@@ -16,6 +16,7 @@ TrackView::TrackView(QWidget *parent) :
     connected(false),
     windowRows(0),
     document(NULL),
+    page(NULL),
     dragging(false)
 {
 #ifdef Q_OS_WIN
@@ -61,6 +62,13 @@ TrackView::TrackView(QWidget *parent) :
 	setupScrollBars();
 	QObject::connect(horizontalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(onHScroll(int)));
 	QObject::connect(verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(onVScroll(int)));
+}
+
+void TrackView::setDocument(SyncDocument *document)
+{
+	this->document = document;
+	this->page = &document->getDefaultSyncPage();
+	this->setupScrollBars();
 }
 
 void TrackView::updatePalette()
@@ -424,7 +432,7 @@ void TrackView::editCopy()
 
 	QVector<struct CopyEntry> copyEntries;
 	for (int track = selection.left(); track <= selection.right(); ++track) {
-		const SyncTrack *t = doc->getDefaultSyncPage().getTrack(track);
+		const SyncTrack *t = page->getTrack(track);
 
 		for (int row = selection.top(); row <= selection.bottom(); ++row) {
 			if (t->isKeyFrame(row)) {
@@ -594,12 +602,14 @@ void TrackView::setupScrollBars()
 	verticalScrollBar()->setMaximum(int(getRows()) - 1);
 	verticalScrollBar()->setPageStep(windowRows);
 
-	int contentWidth = page->getTrackCount() * trackWidth;
-	int viewWidth = qMax(viewport()->width() - leftMarginWidth, 0);
-	horizontalScrollBar()->setValue(editTrack * trackWidth);
-	horizontalScrollBar()->setRange(0, contentWidth - viewWidth);
-	horizontalScrollBar()->setSingleStep(20);
-	horizontalScrollBar()->setPageStep(viewWidth);
+	if (page) {
+		int contentWidth = page->getTrackCount() * trackWidth;
+		int viewWidth = qMax(viewport()->width() - leftMarginWidth, 0);
+		horizontalScrollBar()->setValue(editTrack * trackWidth);
+		horizontalScrollBar()->setRange(0, contentWidth - viewWidth);
+		horizontalScrollBar()->setSingleStep(20);
+		horizontalScrollBar()->setPageStep(viewWidth);
+	}
 }
 
 void TrackView::scrollWindow(int scrollX, int scrollY)
@@ -635,7 +645,8 @@ void TrackView::setScrollPos(int newScrollPosX, int newScrollPosY)
 void TrackView::setEditRow(int newEditRow, bool selecting)
 {
 	SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	if (!doc)
+		return;
 	
 	int oldEditRow = editRow;
 	editRow = newEditRow;
@@ -655,10 +666,10 @@ void TrackView::setEditRow(int newEditRow, bool selecting)
 		dirtyPosition();
 		dirtyCurrentValue();
 	}
-	
+
 	invalidateRow(oldEditRow);
 	invalidateRow(editRow);
-	
+
 	setScrollPos(scrollPosX, (editRow * rowHeight) - ((viewport()->height() - topMarginHeight) / 2) + rowHeight / 2);
 }
 

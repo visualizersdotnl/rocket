@@ -13,11 +13,6 @@ class SyncPage : public QObject {
 public:
 	SyncPage(SyncDocument *document, const QString &name);
 
-	int getTrackIndex(int index) const
-	{
-		return trackOrder[index];
-	}
-
 	SyncTrack *getTrack(int index) const;
 
 	int getTrackCount() const
@@ -25,11 +20,7 @@ public:
 		return trackOrder.size();
 	}
 
-	int addTrack(int trackIndex)
-	{
-		trackOrder.push_back(trackIndex);
-		return trackOrder.size() - 1;
-	}
+	void addTrack(SyncTrack *);
 
 	void swapTrackOrder(int t1, int t2)
 	{
@@ -38,10 +29,19 @@ public:
 		std::swap(trackOrder[t1], trackOrder[t2]);
 	}
 
+public slots:
+	void onKeyFrameChanged(const SyncTrack &track, int)
+	{
+		emit trackVisualChanged(track);
+	}
+
 private:
 	SyncDocument *document;
 	QString name;
-	QVector<int> trackOrder;
+	QVector<SyncTrack *> trackOrder;
+
+signals:
+	void trackVisualChanged(const SyncTrack &track);
 };
 
 #endif // SYNCPAGE_H
