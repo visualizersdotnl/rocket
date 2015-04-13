@@ -20,6 +20,11 @@ public:
 
 	SyncTrack *getTrack(int index) const;
 
+	int getTrackCount() const
+	{
+		return trackOrder.size();
+	}
+
 	int addTrack(int trackIndex)
 	{
 		trackOrder.push_back(trackIndex);
