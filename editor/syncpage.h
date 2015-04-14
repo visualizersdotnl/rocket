@@ -4,16 +4,16 @@
 #include <QObject>
 #include <QString>
 #include <QVector>
+#include "synctrack.h"
 
 class SyncDocument;
-class SyncTrack;
 
 class SyncPage : public QObject {
 	Q_OBJECT
 public:
 	SyncPage(SyncDocument *document, const QString &name);
 
-	SyncTrack *getTrack(int index) const;
+	SyncTrack *getTrack(int index);
 
 	int getTrackCount() const
 	{
@@ -30,9 +30,27 @@ public:
 	}
 
 public slots:
-	void onKeyFrameChanged(const SyncTrack &track, int)
+	// TODO: tighter invalidation on all of these!
+	void onKeyFrameAdded(const SyncTrack &track, int)
 	{
-		emit trackVisualChanged(track);
+		invalidateTrack(track);
+	}
+
+	void onKeyFrameChanged(const SyncTrack &track, int, const SyncTrack::TrackKey &)
+	{
+		invalidateTrack(track);
+	}
+
+	void onKeyFrameRemoved(const SyncTrack &track, int)
+	{
+		invalidateTrack(track);
+	}
+
+	void invalidateTrack(const SyncTrack &track)
+	{
+		int trackIndex = trackOrder.indexOf((SyncTrack*)&track);
+		Q_ASSERT(trackIndex >= 0);
+		emit trackVisualChanged(trackIndex);
 	}
 
 private:
@@ -41,7 +59,7 @@ private:
 	QVector<SyncTrack *> trackOrder;
 
 signals:
-	void trackVisualChanged(const SyncTrack &track);
+	void trackVisualChanged(int trackIndex);
 };
 
 #endif // SYNCPAGE_H

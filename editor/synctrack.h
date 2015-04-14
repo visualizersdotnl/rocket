@@ -144,7 +144,7 @@ public:
 
 	bool isActive() const
 	{
-		return receivers(SIGNAL(trackChanged(const SyncTrack &))) > 0;
+		return receivers(SIGNAL(keyFrameChanged(const SyncTrack &, int, const SyncTrack::TrackKey &))) > 0;
 	}
 
 	QString name;
@@ -152,9 +152,8 @@ private:
 	QMap<int, TrackKey> keys;
 
 signals:
-	void trackChanged(const SyncTrack &track);
 	void keyFrameAdded(const SyncTrack &track, int row);
-	void keyFrameChanged(const SyncTrack &track, int row, const TrackKey &old);
+	void keyFrameChanged(const SyncTrack &track, int row, const SyncTrack::TrackKey &old);
 	void keyFrameRemoved(const SyncTrack &track, int row);
 };
 
