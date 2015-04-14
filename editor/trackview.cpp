@@ -153,9 +153,6 @@ void TrackView::paintEvent(QPaintEvent *event)
 void TrackView::paintTopMargin(QPainter &painter, const QRect &rcTracks)
 {
 	QRect topLeftMargin;
-	const SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
-	
 	topLeftMargin.setTop(-1);
 	topLeftMargin.setBottom(topMarginHeight - 1);
 	topLeftMargin.setLeft(-1);
@@ -239,9 +236,6 @@ void TrackView::paintLeftMargin(QPainter &painter, const QRect &rcTracks)
 
 void TrackView::paintTracks(QPainter &painter, const QRect &rcTracks)
 {
-	const SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
-
 	int firstRow = editRow - windowRows / 2 - 1;
 	int lastRow  = editRow + windowRows / 2 + 1;
 
@@ -305,7 +299,7 @@ void TrackView::paintTrack(QPainter &painter, const QRect &rcTracks, int track)
 
 	QRect selection = getSelection();
 
-	const SyncTrack *t = getDocument()->getDefaultSyncPage().getTrack(track);
+	const SyncTrack *t = page->getTrack(track);
 	QMap<int, SyncTrack::TrackKey> keyMap = t->getKeyMap();
 
 	for (int row = firstRow; row <= lastRow; ++row) {
@@ -364,21 +358,20 @@ void TrackView::mouseMoveEvent(QMouseEvent *event)
 {
 	int track = getTrackFromPhysicalX(event->pos().x());
 	if (dragging) {
-		SyncDocument *doc = getDocument();
 		const int trackCount = page->getTrackCount();
 
-		if (!doc || track < 0 || track >= trackCount)
+		if (!page || track < 0 || track >= trackCount)
 			return;
 
 		if (track > anchorTrack) {
 			for (int i = anchorTrack; i < track; ++i)
-				doc->swapTrackOrder(i, i + 1);
+				page->swapTrackOrder(i, i + 1);
 			anchorTrack = track;
 			setEditTrack(track);
 			viewport()->update();
 		} else if (track < anchorTrack) {
 			for (int i = anchorTrack; i > track; --i)
-				doc->swapTrackOrder(i, i - 1);
+				page->swapTrackOrder(i, i - 1);
 			anchorTrack = track;
 			setEditTrack(track);
 			viewport()->update();
@@ -420,9 +413,6 @@ struct CopyEntry
 
 void TrackView::editCopy()
 {
-	const SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
-	
 	if (!page->getTrackCount()) {
 		QApplication::beep();
 		return;
@@ -644,10 +634,6 @@ void TrackView::setScrollPos(int newScrollPosX, int newScrollPosY)
 
 void TrackView::setEditRow(int newEditRow, bool selecting)
 {
-	SyncDocument *doc = getDocument();
-	if (!doc)
-		return;
-	
 	int oldEditRow = editRow;
 	editRow = newEditRow;
 	
@@ -1008,7 +994,7 @@ void TrackView::keyPressEvent(QKeyEvent *event)
 		return;
 
 	case Qt::Key_K:
-		getDocument()->toggleRowBookmark(getEditRow());
+		doc->toggleRowBookmark(getEditRow());
 		invalidateRow(getEditRow());
 		return;
 	}
