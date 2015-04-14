@@ -41,6 +41,8 @@ public:
 	ClientSocket clientSocket;
 	size_t clientIndex;
 
+	SyncDocument *doc;
+
 	QTabWidget *tabWidget;
 	TrackView *trackView;
 	QLabel *statusPos, *statusValue, *statusKeyType;

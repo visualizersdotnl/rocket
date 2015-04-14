@@ -220,16 +220,14 @@ void MainWindow::setStatusKeyType(SyncTrack::TrackKey::KeyType keyType, bool val
 
 void MainWindow::setDocument(SyncDocument *newDoc)
 {
-	SyncDocument *oldDoc = trackView->getDocument();
-
-	if (oldDoc)
-		QObject::disconnect(oldDoc, SIGNAL(modifiedChanged(bool)),
+	if (doc)
+		QObject::disconnect(doc, SIGNAL(modifiedChanged(bool)),
 		                    this, SLOT(setWindowModified(bool)));
 
-	if (oldDoc && clientSocket.connected()) {
+	if (doc && clientSocket.connected()) {
 		// delete old key frames
-		for (size_t i = 0; i < oldDoc->getTrackCount(); ++i) {
-			SyncTrack *t = oldDoc->getTrack(i);
+		for (size_t i = 0; i < doc->getTrackCount(); ++i) {
+			SyncTrack *t = doc->getTrack(i);
 			QMap<int, SyncTrack::TrackKey> keyMap = t->getKeyMap();
 			QMap<int, SyncTrack::TrackKey>::const_iterator it;
 			for (it = keyMap.constBegin(); it != keyMap.constEnd(); ++it)
@@ -268,15 +266,16 @@ void MainWindow::setDocument(SyncDocument *newDoc)
 		}
 	}
 
+	if (doc)
+		delete doc;
+	doc = newDoc;
 	trackView->setDocument(newDoc);
-	trackView->dirtyCurrentValue();
-	trackView->viewport()->update();
 
 	QObject::connect(newDoc, SIGNAL(modifiedChanged(bool)),
 	                 this, SLOT(setWindowModified(bool)));
 
-	if (oldDoc)
-		delete oldDoc;
+	trackView->dirtyCurrentValue();
+	trackView->viewport()->update();
 }
 
 void MainWindow::fileNew()
@@ -309,7 +308,6 @@ void MainWindow::fileSaveAs()
 {
 	QString fileName = QFileDialog::getSaveFileName(this, "Save File", "", "ROCKET File (*.rocket);;All Files (*.*)");
 	if (fileName.length()) {
-		SyncDocument *doc = trackView->getDocument();
 		if (doc->save(fileName)) {
 			clientSocket.sendSaveCommand();
 			setCurrentFileName(fileName);
@@ -320,7 +318,6 @@ void MainWindow::fileSaveAs()
 
 void MainWindow::fileSave()
 {
-	SyncDocument *doc = trackView->getDocument();
 	if (doc->fileName.isEmpty())
 		return fileSaveAs();
 
@@ -349,7 +346,6 @@ void MainWindow::openRecentFile()
 
 void MainWindow::fileQuit()
 {
-	SyncDocument *doc = trackView->getDocument();
 	if (doc->isModified()) {
 		QMessageBox::StandardButton res = QMessageBox::question(
 		    this, "GNU Rocket", "Save before exit?",
@@ -381,14 +377,14 @@ void MainWindow::editSetRows()
 
 void MainWindow::editPreviousBookmark()
 {
-	int row = trackView->getDocument()->prevRowBookmark(trackView->getEditRow());
+	int row = doc->prevRowBookmark(trackView->getEditRow());
 	if (row >= 0)
 		trackView->setEditRow(row);
 }
 
 void MainWindow::editNextBookmark()
 {
-	int row = trackView->getDocument()->nextRowBookmark(trackView->getEditRow());
+	int row = doc->nextRowBookmark(trackView->getEditRow());
 	if (row >= 0)
 		trackView->setEditRow(row);
 }
@@ -402,7 +398,6 @@ void MainWindow::onPosChanged(int col, int row)
 
 void MainWindow::onCurrValDirty()
 {
-	SyncDocument *doc = trackView->getDocument();
 	if (doc && doc->getTrackCount() > 0) {
 		const SyncTrack *t = doc->getDefaultSyncPage().getTrack(trackView->getEditTrack());
 		int row = trackView->getEditRow();
@@ -438,8 +433,6 @@ void MainWindow::processCommand(ClientSocket &sock)
 
 void MainWindow::processGetTrack(ClientSocket &sock)
 {
-	SyncDocument *doc = trackView->getDocument();
-
 	// read data
 	int strLen;
 	sock.recv((char *)&strLen, sizeof(int));
@@ -580,7 +573,6 @@ void MainWindow::onDisconnected()
 	clientSocket.disconnect();
 
 	// disconnect track-signals
-	SyncDocument *doc = trackView->getDocument();
 	for (size_t i = 0; i < doc->getTrackCount(); ++i) {
 		SyncTrack *t = doc->getTrack(i);
 		QObject::disconnect(t, SIGNAL(keyFrameAdded(const SyncTrack &, int)),

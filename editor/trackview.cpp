@@ -202,7 +202,8 @@ void TrackView::paintTopMargin(QPainter &painter, const QRect &rcTracks)
 void TrackView::paintLeftMargin(QPainter &painter, const QRect &rcTracks)
 {
 	const SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	if (!doc)
+		return;
 
 	int firstRow = editRow - windowRows / 2 - 1;
 	int lastRow  = editRow + windowRows / 2 + 1;
@@ -704,6 +705,7 @@ void TrackView::setEditTrack(int newEditTrack, bool autoscroll, bool selecting)
 
 void TrackView::setRows(size_t rows)
 {
+	// TODO: change this (into signal SyncDocument::rowCountChanged)
 	SyncDocument *doc = getDocument();
 	Q_ASSERT(doc);
 
@@ -800,7 +802,8 @@ void TrackView::editToggleInterpolationType()
 void TrackView::editClear()
 {
 	SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	if (!doc)
+		return;
 
 	QRect selection = getSelection();
 
@@ -826,7 +829,8 @@ void TrackView::editClear()
 void TrackView::editBiasValue(float amount)
 {
 	SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	if (!doc)
+		return;
 
 	if (!page->getTrackCount()) {
 		QApplication::beep();
@@ -859,7 +863,8 @@ void TrackView::editBiasValue(float amount)
 void TrackView::keyPressEvent(QKeyEvent *event)
 {
 	SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	if (!doc)
+		return;
 	
 	if (paused && lineEdit->isVisible()) {
 		switch (event->key()) {
