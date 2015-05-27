@@ -17,10 +17,14 @@
 MainWindow::MainWindow(QTcpServer *serverSocket) :
 	QMainWindow(),
 	serverSocket(serverSocket),
-	clientIndex(0)
+	clientIndex(0),
+	doc(NULL)
 {
-	trackView = new TrackView(this);
-	setCentralWidget(trackView);
+	tabWidget = new QTabWidget(this);
+	trackView = new TrackView(NULL);
+	tabWidget->addTab(trackView, "default");
+
+	setCentralWidget(tabWidget);
 
 	connect(trackView, SIGNAL(posChanged(int, int)),
 	        this, SLOT(onPosChanged(int, int)));
