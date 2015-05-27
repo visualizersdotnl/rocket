@@ -10,13 +10,12 @@
 #include <QLineEdit>
 #include <QDoubleValidator>
 
-TrackView::TrackView(QWidget *parent) :
+TrackView::TrackView(SyncPage *page, QWidget *parent) :
     QAbstractScrollArea(parent),
+    page(page),
     paused(true),
     connected(false),
     windowRows(0),
-    document(NULL),
-    page(NULL),
     dragging(false)
 {
 #ifdef Q_OS_WIN
@@ -64,13 +63,6 @@ TrackView::TrackView(QWidget *parent) :
 	QObject::connect(verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(onVScroll(int)));
 }
 
-void TrackView::setDocument(SyncDocument *document)
-{
-	this->document = document;
-	this->page = &document->getDefaultSyncPage();
-	this->setupScrollBars();
-}
-
 void TrackView::updatePalette()
 {
 	bgBaseBrush = palette().base();
@@ -101,8 +93,7 @@ void TrackView::updateFont()
 
 TrackView::~TrackView()
 {
-	if (document)
-		delete document;
+	// NOP
 }
 
 int TrackView::getLogicalX(int track) const
@@ -201,9 +192,7 @@ void TrackView::paintTopMargin(QPainter &painter, const QRect &rcTracks)
 
 void TrackView::paintLeftMargin(QPainter &painter, const QRect &rcTracks)
 {
-	const SyncDocument *doc = getDocument();
-	if (!doc)
-		return;
+	const SyncDocument *doc = page->getDocument();
 
 	int firstRow = editRow - windowRows / 2 - 1;
 	int lastRow  = editRow + windowRows / 2 + 1;
@@ -361,7 +350,7 @@ void TrackView::mouseMoveEvent(QMouseEvent *event)
 	if (dragging) {
 		const int trackCount = page->getTrackCount();
 
-		if (!page || track < 0 || track >= trackCount)
+		if (track < 0 || track >= trackCount)
 			return;
 
 		if (track > anchorTrack) {
@@ -464,9 +453,7 @@ void TrackView::editCut()
 
 void TrackView::editPaste()
 {
-	SyncDocument *doc = getDocument();
-	if (!doc)
-		return;
+	SyncDocument *doc = page->getDocument();
 	
 	if (!page->getTrackCount()) {
 		QApplication::beep();
@@ -532,9 +519,9 @@ void TrackView::editPaste()
 
 void TrackView::editUndo()
 {
-	SyncDocument *doc = getDocument();
-	if (!doc)
-		return;
+	// TODO: remove this out into mainView
+
+	SyncDocument *doc = page->getDocument();
 
 	if (!doc->canUndo())
 		QApplication::beep();
@@ -547,9 +534,9 @@ void TrackView::editUndo()
 
 void TrackView::editRedo()
 {
-	SyncDocument *doc = getDocument();
-	if (!doc)
-		return;
+	// TODO: remove this out into mainView
+
+	SyncDocument *doc = page->getDocument();
 
 	if (!doc->canRedo())
 		QApplication::beep();
@@ -593,14 +580,12 @@ void TrackView::setupScrollBars()
 	verticalScrollBar()->setMaximum(int(getRows()) - 1);
 	verticalScrollBar()->setPageStep(windowRows);
 
-	if (page) {
-		int contentWidth = page->getTrackCount() * trackWidth;
-		int viewWidth = qMax(viewport()->width() - leftMarginWidth, 0);
-		horizontalScrollBar()->setValue(editTrack * trackWidth);
-		horizontalScrollBar()->setRange(0, contentWidth - viewWidth);
-		horizontalScrollBar()->setSingleStep(20);
-		horizontalScrollBar()->setPageStep(viewWidth);
-	}
+	int contentWidth = page->getTrackCount() * trackWidth;
+	int viewWidth = qMax(viewport()->width() - leftMarginWidth, 0);
+	horizontalScrollBar()->setValue(editTrack * trackWidth);
+	horizontalScrollBar()->setRange(0, contentWidth - viewWidth);
+	horizontalScrollBar()->setSingleStep(20);
+	horizontalScrollBar()->setPageStep(viewWidth);
 }
 
 void TrackView::scrollWindow(int scrollX, int scrollY)
@@ -706,7 +691,7 @@ void TrackView::setEditTrack(int newEditTrack, bool autoscroll, bool selecting)
 void TrackView::setRows(size_t rows)
 {
 	// TODO: change this (into signal SyncDocument::rowCountChanged)
-	SyncDocument *doc = getDocument();
+	SyncDocument *doc = page->getDocument();
 	Q_ASSERT(doc);
 
 	doc->setRows(rows);
@@ -716,7 +701,8 @@ void TrackView::setRows(size_t rows)
 
 size_t TrackView::getRows() const
 {
-	const SyncDocument *doc = getDocument();
+	// TODO: refactor
+	const SyncDocument *doc = page->getDocument();
 	if (!doc)
 		return 0;
 	return doc->getRows();
@@ -739,8 +725,8 @@ void TrackView::onEditingFinished()
 
 void TrackView::editEnterValue()
 {
-	SyncDocument *doc = getDocument();
-	if (!doc || !lineEdit->isVisible())
+	SyncDocument *doc = page->getDocument();
+	if (!lineEdit->isVisible())
 		return;
 
 	if (lineEdit->text().length() > 0 && editTrack < page->getTrackCount()) {
@@ -767,8 +753,7 @@ void TrackView::editEnterValue()
 
 void TrackView::editToggleInterpolationType()
 {
-	SyncDocument *doc = getDocument();
-	if (NULL == doc) return;
+	SyncDocument *doc = page->getDocument();
 	
 	if (editTrack < page->getTrackCount()) {
 		SyncTrack *t = page->getTrack(editTrack);
@@ -801,7 +786,7 @@ void TrackView::editToggleInterpolationType()
 
 void TrackView::editClear()
 {
-	SyncDocument *doc = getDocument();
+	SyncDocument *doc = page->getDocument();
 	if (!doc)
 		return;
 
@@ -828,7 +813,7 @@ void TrackView::editClear()
 
 void TrackView::editBiasValue(float amount)
 {
-	SyncDocument *doc = getDocument();
+	SyncDocument *doc = page->getDocument();
 	if (!doc)
 		return;
 
@@ -862,7 +847,7 @@ void TrackView::editBiasValue(float amount)
 
 void TrackView::keyPressEvent(QKeyEvent *event)
 {
-	SyncDocument *doc = getDocument();
+	SyncDocument *doc = page->getDocument();
 	if (!doc)
 		return;
 	

@@ -15,13 +15,10 @@ class TrackView : public QAbstractScrollArea
 {
 	Q_OBJECT
 public:
-	TrackView(QWidget *parent);
+	TrackView(SyncPage *page, QWidget *parent);
 	~TrackView();
 
-	void setDocument(SyncDocument *document);
-
-	const SyncDocument *getDocument() const { return document; }
-	SyncDocument *getDocument() { return document; }
+	SyncPage *page;
 
 	void setRows(size_t rows);
 	size_t getRows() const;
@@ -53,7 +50,7 @@ public:
 		emit posChanged(editTrack, editRow);
 	}
 
-	bool paused, connected;
+	bool paused, connected; // TODO: get rid of these!
 
 signals:
 	void posChanged(int col, int row);
@@ -166,9 +163,6 @@ private:
 
 	int scrollPosX,  scrollPosY;
 	int windowRows;
-
-	SyncDocument *document;
-	SyncPage *page;
 
 	QLineEdit *lineEdit;
 

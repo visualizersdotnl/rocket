@@ -29,6 +29,13 @@ public:
 		std::swap(trackOrder[t1], trackOrder[t2]);
 	}
 
+	SyncDocument *getDocument()
+	{
+		return document; // TODO: try to encapsulate without exposing
+	}
+
+	const QString &getName() { return name; }
+
 public slots:
 	// TODO: tighter invalidation on all of these!
 	void onKeyFrameAdded(const SyncTrack &track, int)

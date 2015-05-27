@@ -30,6 +30,15 @@ public:
 		SyncTrack *t = new SyncTrack(name);
 		tracks.append(t);
 		defaultSyncPage.addTrack(t);
+
+		QStringList parts = name.split('.');
+		if (parts.size() > 1) {
+			SyncPage *page = findSyncPage(parts[0]);
+			if (!page)
+				page = createSyncPage(parts[0]);
+			page->addTrack(t);
+		}
+
 		return t;
 	}
 
@@ -86,14 +95,40 @@ public:
 	int nextRowBookmark(int row) const;
 	int prevRowBookmark(int row) const;
 
-	SyncPage &getDefaultSyncPage()
+	SyncPage *getDefaultSyncPage()
 	{
-		return defaultSyncPage;
+		return &defaultSyncPage;
+	}
+
+	SyncPage *findSyncPage(const QString &name)
+	{
+		for (int i = 0; i < syncPages.size(); ++i)
+			if (name == syncPages[i]->getName())
+				return syncPages[i];
+		return NULL;
+	}
+
+	SyncPage *createSyncPage(const QString &name)
+	{
+		SyncPage *syncPage = new SyncPage(this, name);
+		syncPages.append(syncPage);
+		return syncPage;
+	}
+
+	int getSyncPageCount() const
+	{
+		return syncPages.size();
+	}
+
+	SyncPage *getSyncPage(int index)
+	{
+		return syncPages[index];
 	}
 
 private:
 	QList<SyncTrack*> tracks;
 	QList<int> rowBookmarks;
+	QList<SyncPage*> syncPages;
 	SyncPage defaultSyncPage;
 	size_t rows;
 

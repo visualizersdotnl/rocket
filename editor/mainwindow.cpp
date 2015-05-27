@@ -18,20 +18,14 @@ MainWindow::MainWindow(QTcpServer *serverSocket) :
 	QMainWindow(),
 	serverSocket(serverSocket),
 	clientIndex(0),
-	doc(NULL)
+	doc(NULL),
+	currentTrackView(NULL)
 {
 	tabWidget = new QTabWidget(this);
-	trackView = new TrackView(NULL);
-	tabWidget->addTab(trackView, "default");
+	connect(tabWidget, SIGNAL(currentChanged(int)),
+	        this, SLOT(onTabChanged(int)));
 
 	setCentralWidget(tabWidget);
-
-	connect(trackView, SIGNAL(posChanged(int, int)),
-	        this, SLOT(onPosChanged(int, int)));
-	connect(trackView,     SIGNAL(pauseChanged(bool)),
-	        &clientSocket, SLOT(onPauseChanged(bool)));
-	connect(trackView, SIGNAL(currValDirty()),
-	        this, SLOT(onCurrValDirty()));
 
 	createMenuBar();
 	createStatusBar();
@@ -72,17 +66,17 @@ void MainWindow::createMenuBar()
 	fileMenu->addAction(QIcon::fromTheme("application-exit"), "E&xit", this, SLOT(fileQuit()), QKeySequence::Quit);
 
 	editMenu = menuBar()->addMenu("&Edit");
-	editMenu->addAction(QIcon::fromTheme("edit-undo"), "Undo", trackView, SLOT(editUndo()), QKeySequence::Undo);
-	editMenu->addAction(QIcon::fromTheme("edit-redo"), "Redo", trackView, SLOT(editRedo()), QKeySequence::Redo);
+	editMenu->addAction(QIcon::fromTheme("edit-undo"), "Undo", this, SLOT(editUndo()), QKeySequence::Undo);
+	editMenu->addAction(QIcon::fromTheme("edit-redo"), "Redo", this, SLOT(editRedo()), QKeySequence::Redo);
 	editMenu->addSeparator();
-	editMenu->addAction(QIcon::fromTheme("edit-copy"), "&Copy", trackView, SLOT(editCopy()), QKeySequence::Copy);
-	editMenu->addAction(QIcon::fromTheme("edit-cut"), "Cu&t", trackView, SLOT(editCut()), QKeySequence::Cut);
-	editMenu->addAction(QIcon::fromTheme("edit-paste"), "&Paste", trackView, SLOT(editPaste()), QKeySequence::Paste);
-	editMenu->addAction(QIcon::fromTheme("edit-clear"), "Clear", trackView, SLOT(editClear()), QKeySequence::Delete);
+	editMenu->addAction(QIcon::fromTheme("edit-copy"), "&Copy", this, SLOT(editCopy()), QKeySequence::Copy);
+	editMenu->addAction(QIcon::fromTheme("edit-cut"), "Cu&t", this, SLOT(editCut()), QKeySequence::Cut);
+	editMenu->addAction(QIcon::fromTheme("edit-paste"), "&Paste", this, SLOT(editPaste()), QKeySequence::Paste);
+	editMenu->addAction(QIcon::fromTheme("edit-clear"), "Clear", this, SLOT(editClear()), QKeySequence::Delete);
 	editMenu->addSeparator();
-	editMenu->addAction(QIcon::fromTheme("edit-select-all"), "Select All", trackView, SLOT(selectAll()), QKeySequence::SelectAll);
-	editMenu->addAction("Select Track", trackView, SLOT(selectTrack()), Qt::CTRL + Qt::Key_T);
-	editMenu->addAction("Select Row", trackView, SLOT(selectRow()));
+	editMenu->addAction(QIcon::fromTheme("edit-select-all"), "Select All", this, SLOT(editSelectAll()), QKeySequence::SelectAll);
+	editMenu->addAction("Select Track", this, SLOT(editSelectTrack()), Qt::CTRL + Qt::Key_T);
+	editMenu->addAction("Select Row", this, SLOT(editSelectRow()));
 	editMenu->addSeparator();
 	editMenu->addAction("Bias Selection", this, SLOT(editBiasSelection()), Qt::CTRL + Qt::Key_B);
 	editMenu->addSeparator();
@@ -270,16 +264,27 @@ void MainWindow::setDocument(SyncDocument *newDoc)
 		}
 	}
 
+	// recreate empty set of trackViews
+	while (trackViews.count() > 0) {
+		TrackView *trackView = trackViews.front();
+		trackViews.removeFirst();
+		delete trackView;
+	}
+	trackViews.clear();
+	defaultTrackView = addTrackView(newDoc->getDefaultSyncPage());
+
+	for (int i = 0; i < newDoc->getSyncPageCount(); ++i)
+		addTrackView(newDoc->getSyncPage(i));
+
 	if (doc)
 		delete doc;
 	doc = newDoc;
-	trackView->setDocument(newDoc);
 
 	QObject::connect(newDoc, SIGNAL(modifiedChanged(bool)),
 	                 this, SLOT(setWindowModified(bool)));
 
-	trackView->dirtyCurrentValue();
-	trackView->viewport()->update();
+	currentTrackView->dirtyCurrentValue();
+	currentTrackView->viewport()->update();
 }
 
 void MainWindow::fileNew()
@@ -363,48 +368,94 @@ void MainWindow::fileQuit()
 	else QApplication::quit();
 }
 
+void MainWindow::editUndo()
+{
+	currentTrackView->editUndo();
+}
+
+void MainWindow::editRedo()
+{
+	currentTrackView->editRedo();
+}
+
+void MainWindow::editCopy()
+{
+	currentTrackView->editCopy();
+}
+
+void MainWindow::editCut()
+{
+	currentTrackView->editCut();
+}
+
+void MainWindow::editPaste()
+{
+	currentTrackView->editPaste();
+}
+
+void MainWindow::editClear()
+{
+	currentTrackView->editClear();
+}
+
+void MainWindow::editSelectAll()
+{
+	currentTrackView->selectAll();
+}
+
+void MainWindow::editSelectTrack()
+{
+	currentTrackView->selectTrack();
+}
+
+void MainWindow::editSelectRow()
+{
+	currentTrackView->selectRow();
+}
+
 void MainWindow::editBiasSelection()
 {
 	bool ok = false;
 	float bias = QInputDialog::getDouble(this, "Bias Selection", "", 0, INT_MIN, INT_MAX, 1, &ok);
 	if (ok)
-		trackView->editBiasValue(bias);
+		currentTrackView->editBiasValue(bias);
 }
 
 void MainWindow::editSetRows()
 {
 	bool ok = false;
-	int rows = QInputDialog::getInt(this, "Set Rows", "", trackView->getRows(), 0, INT_MAX, 1, &ok);
+	int rows = QInputDialog::getInt(this, "Set Rows", "", currentTrackView->getRows(), 0, INT_MAX, 1, &ok);
 	if (ok)
-		trackView->setRows(rows);
+		currentTrackView->setRows(rows);
 }
 
 void MainWindow::editPreviousBookmark()
 {
-	int row = doc->prevRowBookmark(trackView->getEditRow());
+	int row = doc->prevRowBookmark(currentTrackView->getEditRow());
 	if (row >= 0)
-		trackView->setEditRow(row);
+		currentTrackView->setEditRow(row);
 }
 
 void MainWindow::editNextBookmark()
 {
-	int row = doc->nextRowBookmark(trackView->getEditRow());
+	int row = doc->nextRowBookmark(currentTrackView->getEditRow());
 	if (row >= 0)
-		trackView->setEditRow(row);
+		currentTrackView->setEditRow(row);
 }
 
 void MainWindow::onPosChanged(int col, int row)
 {
 	setStatusPosition(col, row);
-	if (trackView->paused && clientSocket.connected())
+	// YUCK: need to get paused state out of TrackView
+	if (currentTrackView->paused && clientSocket.connected())
 		clientSocket.sendSetRowCommand(row);
 }
 
 void MainWindow::onCurrValDirty()
 {
 	if (doc && doc->getTrackCount() > 0) {
-		const SyncTrack *t = doc->getDefaultSyncPage().getTrack(trackView->getEditTrack());
-		int row = trackView->getEditRow();
+		const SyncTrack *t = currentTrackView->page->getTrack(currentTrackView->getEditTrack());
+		int row = currentTrackView->getEditRow();
 
 		setStatusValue(t->getValue(row), true);
 
@@ -417,6 +468,44 @@ void MainWindow::onCurrValDirty()
 		setStatusValue(0.0f, false);
 		setStatusKeyType(SyncTrack::TrackKey::STEP, false);
 	}
+}
+
+TrackView *MainWindow::addTrackView(SyncPage *page)
+{
+	TrackView *trackView = new TrackView(page, NULL);
+
+	trackViews.append(trackView);
+	tabWidget->addTab(trackView, page->getName());
+
+	return trackView;
+}
+
+void MainWindow::setTrackView(TrackView *newTrackView)
+{
+	if (currentTrackView) {
+		disconnect(currentTrackView, SIGNAL(posChanged(int, int)),
+		           this,               SLOT(onPosChanged(int, int)));
+		disconnect(currentTrackView, SIGNAL(pauseChanged(bool)),
+		           &clientSocket,      SLOT(onPauseChanged(bool)));
+		disconnect(currentTrackView, SIGNAL(currValDirty()),
+		           this,               SLOT(onCurrValDirty()));
+	}
+
+	currentTrackView = newTrackView;
+
+	if (currentTrackView) {
+		connect(currentTrackView, SIGNAL(posChanged(int, int)),
+			this,               SLOT(onPosChanged(int, int)));
+		connect(currentTrackView, SIGNAL(pauseChanged(bool)),
+			&clientSocket,      SLOT(onPauseChanged(bool)));
+		connect(currentTrackView, SIGNAL(currValDirty()),
+			this,               SLOT(onCurrValDirty()));
+	}
+}
+
+void MainWindow::onTabChanged(int index)
+{
+	setTrackView(index < 0 ? NULL : trackViews[index]);
 }
 
 void MainWindow::processCommand(ClientSocket &sock)
@@ -446,7 +535,7 @@ void MainWindow::processGetTrack(ClientSocket &sock)
 
 	if (!strLen) {
 		sock.disconnect();
-		trackView->update();
+		currentTrackView->update();
 		return;
 	}
 
@@ -457,7 +546,7 @@ void MainWindow::processGetTrack(ClientSocket &sock)
 
 	if (trackNameBuffer.contains('\0')) {
 		sock.disconnect();
-		trackView->update();
+		currentTrackView->update();
 		return;
 	}
 
@@ -485,14 +574,14 @@ void MainWindow::processGetTrack(ClientSocket &sock)
 	for (it = keyMap.constBegin(); it != keyMap.constEnd(); ++it)
 		clientSocket.sendSetKeyCommand(t->name.toUtf8().constData(), *it);
 
-	trackView->update();
+	currentTrackView->update();
 }
 
 void MainWindow::processSetRow(ClientSocket &sock)
 {
 	int newRow;
 	sock.recv((char*)&newRow, sizeof(int));
-	trackView->setEditRow(qToBigEndian((quint32)newRow));
+	currentTrackView->setEditRow(qToBigEndian((quint32)newRow));
 }
 
 static TcpSocket *clientConnect(QTcpServer *serverSocket, QHostAddress *host)
@@ -563,9 +652,9 @@ void MainWindow::onNewConnection()
 			connect(socket->socket, SIGNAL(readyRead()), this, SLOT(onReadyRead()));
 			connect(socket->socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
 			clientIndex = 0;
-			clientSocket.sendPauseCommand(trackView->paused);
-			clientSocket.sendSetRowCommand(trackView->getEditRow());
-			trackView->connected = true;
+			clientSocket.sendPauseCommand(currentTrackView->paused);
+			clientSocket.sendSetRowCommand(currentTrackView->getEditRow());
+			currentTrackView->connected = true;
 		} else
 			setStatusText(QString("Not Connected: %1").arg(serverSocket->errorString()));
 	}
@@ -573,7 +662,7 @@ void MainWindow::onNewConnection()
 
 void MainWindow::onDisconnected()
 {
-	trackView->paused = true;
+	currentTrackView->paused = true;
 	clientSocket.disconnect();
 
 	// disconnect track-signals
@@ -587,7 +676,7 @@ void MainWindow::onDisconnected()
 		                    &clientSocket, SLOT(onKeyFrameRemoved(const SyncTrack &, int)));
 	}
 
-	trackView->update();
+	currentTrackView->update();
 	setStatusText("Not Connected.");
-	trackView->connected = false;
+	currentTrackView->connected = false;
 }

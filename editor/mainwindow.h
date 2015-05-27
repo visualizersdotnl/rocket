@@ -11,6 +11,7 @@ class QTabWidget;
 class QTcpServer;
 
 class SyncDocument;
+class SyncPage;
 class TrackView;
 class ClientSocket;
 
@@ -37,6 +38,10 @@ public:
 	void setStatusValue(double val, bool valid);
 	void setStatusKeyType(SyncTrack::TrackKey::KeyType keyType, bool valid);
 
+	TrackView *addTrackView(SyncPage *page);
+	void setTrackView(TrackView *trackView);
+
+
 	QTcpServer *serverSocket;
 	ClientSocket clientSocket;
 	size_t clientIndex;
@@ -44,7 +49,9 @@ public:
 	SyncDocument *doc;
 
 	QTabWidget *tabWidget;
-	TrackView *trackView;
+	QList<TrackView *> trackViews;
+	TrackView *defaultTrackView, *currentTrackView;
+
 	QLabel *statusPos, *statusValue, *statusKeyType;
 	QMenu *fileMenu, *recentFilesMenu, *editMenu;
 	QAction *recentFileActions[5];
@@ -60,6 +67,16 @@ public slots:
 
 	void editBiasSelection();
 
+	void editUndo();
+	void editRedo();
+	void editCopy();
+	void editCut();
+	void editPaste();
+	void editClear();
+	void editSelectAll();
+	void editSelectTrack();
+	void editSelectRow();
+
 	void editSetRows();
 
 	void editPreviousBookmark();
@@ -69,6 +86,8 @@ public slots:
 	void onCurrValDirty();
 
 private slots:
+	void onTabChanged(int index);
+
 	void onReadyRead();
 	void onNewConnection();
 	void onDisconnected();
